@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/checkout.css">
+    <title>Checkout - AutoPro</title>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">AutoPro</div>
+            <h1>Finalizar Compra</h1>
+        </div>
+
+        <div class="checkout-container">
+            <div class="checkout-form">
+                <div class="error-message" id="errorMessage"></div>
+
+                <form id="checkoutForm">
+                    <!-- Seleção do Plano -->
+                    <div class="section-title">
+                        📦 Escolha seu Plano
+                    </div>
+                    <div class="plan-selector">
+                        <div class="plan-option" data-plan="basico" data-price="497">
+                            <div class="plan-name">Automação Básica</div>
+                            <div class="plan-price">R$ 497</div>
+                        </div>
+                        <div class="plan-option" data-plan="profissional" data-price="997">
+                            <div class="plan-name">Automação Profissional</div>
+                            <div class="plan-price">R$ 997</div>
+                        </div>
+                        <div class="plan-option" data-plan="enterprise" data-price="1997">
+                            <div class="plan-name">Automação Enterprise</div>
+                            <div class="plan-price">R$ 1.997</div>
+                        </div>
+                    </div>
+
+                    <!-- Dados Pessoais -->
+                    <div class="section-title">
+                        👤 Dados Pessoais
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nome Completo *</label>
+                            <input type="text" name="nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" name="email" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Telefone *</label>
+                            <input type="tel" name="telefone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CPF/CNPJ *</label>
+                            <input type="text" name="documento" required>
+                        </div>
+                    </div>
+
+                    <!-- Dados da Empresa -->
+                    <div class="section-title">
+                        🏢 Dados da Empresa
+                    </div>
+                    <div class="form-group">
+                        <label>Nome da Empresa</label>
+                        <input type="text" name="empresa">
+                    </div>
+                    <div class="form-group">
+                        <label>Segmento/Área de Atuação</label>
+                        <select name="segmento">
+                            <option value="">Selecione...</option>
+                            <option value="comercio">Comércio</option>
+                            <option value="servicos">Serviços</option>
+                            <option value="industria">Indústria</option>
+                            <option value="tecnologia">Tecnologia</option>
+                            <option value="saude">Saúde</option>
+                            <option value="educacao">Educação</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <!-- Método de Pagamento -->
+                    <div class="section-title">
+                        💳 Método de Pagamento
+                    </div>
+                    <div class="payment-methods">
+                        <div class="payment-option" data-method="card">
+                            <span>💳</span> Cartão
+                        </div>
+                        <div class="payment-option" data-method="pix">
+                            <span>📱</span> PIX
+                        </div>
+                        <div class="payment-option" data-method="boleto">
+                            <span>📄</span> Boleto
+                        </div>
+                    </div>
+
+                    <!-- Dados do Cartão -->
+                    <div class="card-inputs" id="cardInputs">
+                        <div class="form-group">
+                            <label>Número do Cartão *</label>
+                            <input type="text" name="cardNumber" placeholder="0000 0000 0000 0000">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Validade *</label>
+                                <input type="text" name="cardExpiry" placeholder="MM/AA">
+                            </div>
+                            <div class="form-group">
+                                <label>CVV *</label>
+                                <input type="text" name="cardCvv" placeholder="123">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Nome no Cartão *</label>
+                            <input type="text" name="cardName">
+                        </div>
+                    </div>
+
+                    <!-- Informações PIX -->
+                    <div class="pix-info" id="pixInfo">
+                        <h4>🔄 Pagamento via PIX</h4>
+                        <p>Após confirmar o pedido, você receberá o código PIX para pagamento instantâneo.</p>
+                    </div>
+
+                    <!-- Necessidades Específicas -->
+                    <div class="section-title">
+                        ⚙️ Necessidades Específicas
+                    </div>
+                    <div class="form-group">
+                        <label>Descreva suas principais necessidades de automação</label>
+                        <textarea name="necessidades" rows="3" placeholder="Ex: Automatizar envio de emails, integrar sistemas, gerar relatórios..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary pulse">
+                        Finalizar Compra
+                    </button>
+                </form>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processando seu pagamento...</p>
+                </div>
+
+                <div class="success-message" id="successMessage">
+                    <div class="success-icon">✓</div>
+                    <h2>Compra Realizada com Sucesso!</h2>
+                    <p>Obrigado pela sua compra! Você receberá um email de confirmação em breve.</p>
+                    <p>Nossa equipe entrará em contato em até 24 horas para iniciar o processo de automação.</p>
+                </div>
+
+                <div class="security-badges">
+                    <div class="security-badge">
+                        <span>🔒</span> Pagamento Seguro
+                    </div>
+                    <div class="security-badge">
+                        <span>🛡️</span> SSL Certificado
+                    </div>
+                    <div class="security-badge">
+                        <span>✅</span> Dados Protegidos
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-summary">
+                <div class="section-title">
+                    📄 Resumo do Pedido
+                </div>
+                <div id="orderDetails">
+                    <p style="text-align: center; color: #64748b; padding: 2rem;">
+                        Selecione um plano para ver o resumo
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script> 
+</body>
+</html>
