@@ -391,19 +391,35 @@ const emailService = {
                 return false;
             }
             
-            const emailParams = {
-                to_email: CONFIG.NOTIFICATION_EMAIL,
-                customer_name: orderData.customer.nome,
-                customer_email: orderData.customer.email,
-                customer_phone: orderData.customer.telefone,
-                plan_name: orderData.plan.name,
-                plan_price: utils.formatCurrency(orderData.plan.price),
-                company: orderData.customer.empresa || 'Não informado',
-                segment: orderData.customer.segmento || 'Não informado',
-                needs: orderData.necessidades || 'Não informado',
-                payment_method: orderData.payment,
-                timestamp: new Date().toLocaleString('pt-BR')
-            };
+            const planPrice = orderData.plan.price;
+const shippingCost = 1;
+const taxCost = planPrice * CONFIG.TAX_RATE;
+const totalCost = planPrice + taxCost + shippingCost;
+
+const emailParams = {
+    order_id: utils.generateTransactionId(),
+    price: planPrice.toFixed(2),
+    'cost.shipping': shippingCost.toFixed(2),
+    'cost.tax': taxCost.toFixed(2),
+    'cost.total': totalCost.toFixed(2),
+    orders: [
+        {
+            name: orderData.plan.name,
+            units: 1
+        }
+    ],
+    customer_name: orderData.customer.nome,
+    customer_email: orderData.customer.email,
+    customer_phone: orderData.customer.telefone,
+    plan_name: orderData.plan.name,
+    plan_price: utils.formatCurrency(planPrice),
+    company: orderData.customer.empresa || 'Não informado',
+    segment: orderData.customer.segmento || 'Não informado',
+    needs: orderData.necessidades || 'Não informado',
+    payment_method: orderData.payment,
+    timestamp: new Date().toLocaleString('pt-BR')
+};
+
             
             const response = await emailjs.send(
                 CONFIG.EMAIL_SERVICE_ID,
