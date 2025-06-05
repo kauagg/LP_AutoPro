@@ -384,12 +384,12 @@ const emailService = {
         }
     },
 
-    sendNotification: async (orderData) => {
-        try {
-            if (typeof emailjs === 'undefined') {
-                console.error('EmailJS não está disponível');
-                return false;
-            }
+   // sendNotification: async (orderData) => {
+       // try {
+           // if (typeof emailjs === 'undefined') {
+               // console.error('EmailJS não está disponível');
+                //return false;
+           // }//
 
             // Calcular custos e formatar valores
             const planPrice = orderData.plan.price || 0;
