@@ -399,6 +399,57 @@ const validator = {
     }
 };
 
+// Serviço de email
+const emailService = {
+    init: () => {
+        // Inicializar EmailJS uma vez no carregamento da página
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(CONFIG.EMAIL_USER_ID);
+            console.log('EmailJS inicializado com sucesso');
+        } else {
+            console.error('EmailJS não está disponível');
+        }
+    },
+    
+    sendNotification: async (orderData) => {
+        try {
+            // Verificar se EmailJS está disponível
+            if (typeof emailjs === 'undefined') {
+                console.error('EmailJS não está disponível');
+                return false;
+            }
+            
+            const emailParams = {
+                to_email: CONFIG.NOTIFICATION_EMAIL,
+                customer_name: orderData.customer.nome,
+                customer_email: orderData.customer.email,
+                customer_phone: orderData.customer.telefone,
+                plan_name: orderData.plan.name,
+                plan_price: utils.formatCurrency(orderData.plan.price),
+                company: orderData.customer.empresa || 'Não informado',
+                segment: orderData.customer.segmento || 'Não informado',
+                needs: orderData.necessidades || 'Não informado',
+                payment_method: orderData.payment,
+                timestamp: new Date().toLocaleString('pt-BR')
+            };
+            
+            // Enviar o email
+            const response = await emailjs.send(
+                CONFIG.EMAIL_SERVICE_ID, 
+                CONFIG.EMAIL_TEMPLATE_ID, 
+                emailParams
+            );
+            
+            console.log('Email enviado com sucesso:', response);
+            return true;
+            
+        } catch (error) {
+            console.error('Erro ao enviar email:', error);
+            return false;
+        }
+    }
+};
+
 // Processamento de pagamento
 const paymentProcessor = {
     process: async () => {
@@ -414,7 +465,11 @@ const paymentProcessor = {
             const paymentResult = await paymentProcessor.simulatePayment(orderData);
             
             // Enviar notificação
-            await emailService.sendNotification(orderData);
+            const emailSent = await emailService.sendNotification(orderData);
+            
+            if (!emailSent) {
+                console.warn('O pagamento foi processado, mas o email não foi enviado');
+            }
             
             // Mostrar sucesso
             ui.showSuccess();
@@ -464,43 +519,6 @@ const paymentProcessor = {
     }
 };
 
-// Serviço de email
-const emailService = {
-    sendNotification: async (orderData) => {
-        try {
-            // Verificar se EmailJS está disponível
-            if (typeof emailjs === 'undefined') {
-                console.warn('EmailJS não está disponível');
-                return Promise.resolve();
-            }
-            
-            // Inicializar EmailJS
-            emailjs.init(CONFIG.EMAIL_USER_ID);
-            
-            const emailParams = {
-                to_email: CONFIG.NOTIFICATION_EMAIL,
-                customer_name: orderData.customer.nome,
-                customer_email: orderData.customer.email,
-                customer_phone: orderData.customer.telefone,
-                plan_name: orderData.plan.name,
-                plan_price: utils.formatCurrency(orderData.plan.price),
-                company: orderData.customer.empresa || 'Não informado',
-                segment: orderData.customer.segmento || 'Não informado',
-                needs: orderData.necessidades || 'Não informado',
-                payment_method: orderData.payment,
-                timestamp: new Date().toLocaleString('pt-BR')
-            };
-            
-            await emailjs.send(CONFIG.EMAIL_SERVICE_ID, CONFIG.EMAIL_TEMPLATE_ID, emailParams);
-            console.log('Email enviado com sucesso');
-            
-        } catch (error) {
-            console.error('Erro ao enviar email:', error);
-            // Não falhar o processo se o email falhar
-        }
-    }
-};
-
 // Inicialização da aplicação
 const app = {
     init: () => {
@@ -513,6 +531,9 @@ const app = {
     },
     
     initializeComponents: () => {
+        // Inicializar EmailJS primeiro
+        emailService.init();
+        
         // Inicializar componentes
         planManager.init();
         paymentManager.init();
@@ -534,6 +555,38 @@ const app = {
         const inputs = document.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
             input.addEventListener('input', ui.hideError);
+        });
+        
+        // Botão de teste para envio de email (remover em produção)
+        const testButton = document.createElement('button');
+        testButton.textContent = 'Testar Email';
+        testButton.id = 'testEmail';
+        testButton.style.position = 'fixed';
+        testButton.style.bottom = '20px';
+        testButton.style.right = '20px';
+        testButton.style.zIndex = '1000';
+        testButton.style.padding = '10px';
+        testButton.style.backgroundColor = '#4CAF50';
+        testButton.style.color = 'white';
+        testButton.style.border = 'none';
+        testButton.style.borderRadius = '4px';
+        testButton.style.cursor = 'pointer';
+        document.body.appendChild(testButton);
+        
+        testButton.addEventListener('click', async () => {
+            const testData = {
+                plan: { name: "Plano Teste", price: 99.90 },
+                payment: "card",
+                customer: {
+                    nome: "Cliente Teste",
+                    email: "teste@example.com",
+                    telefone: "(11) 99999-9999"
+                },
+                necessidades: "Teste de envio de email"
+            };
+            
+            const result = await emailService.sendNotification(testData);
+            alert(result ? "Email de teste enviado com sucesso!" : "Falha ao enviar email de teste");
         });
         
         console.log('Aplicação inicializada com sucesso');
