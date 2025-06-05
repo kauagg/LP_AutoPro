@@ -27,9 +27,16 @@ const utils = {
     
     formatPhone: (value) => {
         const numbers = value.replace(/\D/g, '');
-        return numbers
-            .replace(/(\d{2})(\d)/, '($1) $2')
-            .replace(/(\d)(\d{4})$/, '$1-$2');
+        if (numbers.length <= 10) {
+            // Telefone fixo ou celular 10 dígitos
+            return numbers
+                .replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+                .trim();
+        } else {
+            // Celular com 11 dígitos
+            return numbers
+                .replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        }
     },
     
     formatDocument: (value) => {
@@ -52,13 +59,14 @@ const utils = {
     },
     
     formatCardNumber: (value) => {
-        const numbers = value.replace(/\D/g, '');
+        const numbers = value.replace(/\D/g, '').substr(0, 19);
         return numbers.replace(/(\d{4})(?=\d)/g, '$1 ');
     },
     
     formatCardExpiry: (value) => {
-        const numbers = value.replace(/\D/g, '');
-        return numbers.replace(/(\d{2})(\d)/, '$1/$2');
+        const numbers = value.replace(/\D/g, '').substr(0, 4);
+        if (numbers.length <= 2) return numbers;
+        return numbers.replace(/(\d{2})(\d{1,2})/, '$1/$2');
     },
     
     generateTransactionId: () => {
@@ -78,18 +86,21 @@ const utils = {
     },
     
     validateCardExpiry: (expiry) => {
-        const [month, year] = expiry.split('/');
-        if (!month || !year) return false;
+        const parts = expiry.split('/');
+        if (parts.length !== 2) return false;
+        const [monthStr, yearStr] = parts;
+        if (!/^\d{2}$/.test(monthStr) || !/^\d{2}$/.test(yearStr)) return false;
         
-        const currentDate = new Date();
-        const currentYear = currentDate.getFullYear() % 100;
-        const currentMonth = currentDate.getMonth() + 1;
+        const month = parseInt(monthStr, 10);
+        const year = parseInt(yearStr, 10);
+        if (month < 1 || month > 12) return false;
         
-        const cardMonth = parseInt(month);
-        const cardYear = parseInt(year);
+        const now = new Date();
+        const currentYear = now.getFullYear() % 100;
+        const currentMonth = now.getMonth() + 1;
         
-        if (cardMonth < 1 || cardMonth > 12) return false;
-        if (cardYear < currentYear || (cardYear === currentYear && cardMonth < currentMonth)) return false;
+        if (year < currentYear) return false;
+        if (year === currentYear && month < currentMonth) return false;
         
         return true;
     }
@@ -103,9 +114,7 @@ const ui = {
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             errorDiv.setAttribute('role', 'alert');
-            
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            
             setTimeout(() => {
                 errorDiv.style.display = 'none';
             }, 5000);
@@ -122,7 +131,6 @@ const ui = {
     showLoading: () => {
         const form = document.getElementById('checkoutForm');
         const loading = document.getElementById('loading');
-        
         if (form) form.style.display = 'none';
         if (loading) loading.style.display = 'block';
     },
@@ -130,7 +138,6 @@ const ui = {
     hideLoading: () => {
         const form = document.getElementById('checkoutForm');
         const loading = document.getElementById('loading');
-        
         if (form) form.style.display = 'block';
         if (loading) loading.style.display = 'none';
     },
@@ -139,10 +146,10 @@ const ui = {
         const form = document.getElementById('checkoutForm');
         const loading = document.getElementById('loading');
         const success = document.getElementById('successMessage');
-        
         if (form) form.style.display = 'none';
         if (loading) loading.style.display = 'none';
         if (success) success.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     
     updateFieldError: (field, hasError) => {
@@ -163,26 +170,20 @@ const planManager = {
     },
     
     selectPlan: function() {
-        // Remove seleção anterior
         document.querySelectorAll('.plan-option').forEach(p => {
             p.classList.remove('selected');
             p.setAttribute('aria-selected', 'false');
         });
         
-        // Adiciona nova seleção
         this.classList.add('selected');
         this.setAttribute('aria-selected', 'true');
         
         const planNameElement = this.querySelector('.plan-name');
-        const planName = planNameElement ? planNameElement.textContent : '';
+        const planName = planNameElement ? planNameElement.textContent.trim() : '';
         const planPrice = parseFloat(this.dataset.price) || 0;
         const planType = this.dataset.plan || '';
         
-        appState.selectedPlan = {
-            name: planName,
-            price: planPrice,
-            type: planType
-        };
+        appState.selectedPlan = { name: planName, price: planPrice, type: planType };
         
         orderManager.updateSummary();
     }
@@ -198,13 +199,11 @@ const paymentManager = {
     },
     
     selectPayment: function() {
-        // Remove seleção anterior
         document.querySelectorAll('.payment-option').forEach(p => {
             p.classList.remove('selected');
             p.setAttribute('aria-selected', 'false');
         });
         
-        // Adiciona nova seleção
         this.classList.add('selected');
         this.setAttribute('aria-selected', 'true');
         
@@ -217,11 +216,9 @@ const paymentManager = {
         const cardInputs = document.getElementById('cardInputs');
         const pixInfo = document.getElementById('pixInfo');
         
-        // Oculta todos os campos
         if (cardInputs) cardInputs.classList.remove('active');
         if (pixInfo) pixInfo.classList.remove('active');
         
-        // Mostra campos específicos
         if (appState.selectedPayment === 'card' && cardInputs) {
             cardInputs.classList.add('active');
         } else if (appState.selectedPayment === 'pix' && pixInfo) {
@@ -234,7 +231,6 @@ const paymentManager = {
 const orderManager = {
     updateSummary: () => {
         const orderDetails = document.getElementById('orderDetails');
-        
         if (!orderDetails || !appState.selectedPlan) return;
         
         const planPrice = appState.selectedPlan.price;
@@ -266,21 +262,10 @@ const fieldFormatter = {
         const cardNumberField = document.querySelector('input[name="cardNumber"]');
         const cardExpiryField = document.querySelector('input[name="cardExpiry"]');
         
-        if (phoneField) {
-            phoneField.addEventListener('input', fieldFormatter.formatPhone);
-        }
-        
-        if (documentField) {
-            documentField.addEventListener('input', fieldFormatter.formatDocument);
-        }
-        
-        if (cardNumberField) {
-            cardNumberField.addEventListener('input', fieldFormatter.formatCardNumber);
-        }
-        
-        if (cardExpiryField) {
-            cardExpiryField.addEventListener('input', fieldFormatter.formatCardExpiry);
-        }
+        if (phoneField) phoneField.addEventListener('input', fieldFormatter.formatPhone);
+        if (documentField) documentField.addEventListener('input', fieldFormatter.formatDocument);
+        if (cardNumberField) cardNumberField.addEventListener('input', fieldFormatter.formatCardNumber);
+        if (cardExpiryField) cardExpiryField.addEventListener('input', fieldFormatter.formatCardExpiry);
     },
     
     formatPhone: (e) => {
@@ -322,18 +307,14 @@ const validator = {
         const form = document.getElementById('checkoutForm');
         if (form) {
             const requiredFields = form.querySelectorAll('[required]');
-            
             requiredFields.forEach(field => {
                 const isValid = validator.validateField(field);
                 ui.updateFieldError(field, !isValid);
-                
-                if (!isValid) {
-                    hasError = true;
-                }
+                if (!isValid) hasError = true;
             });
         }
         
-        // Validar campos específicos do cartão
+        // Validar campos do cartão se selecionado
         if (appState.selectedPayment === 'card') {
             const cardValidation = validator.validateCardFields();
             if (!cardValidation.isValid) {
@@ -350,15 +331,8 @@ const validator = {
     },
     
     validateField: (field) => {
-        if (!field.value.trim()) {
-            return false;
-        }
-        
-        // Validações específicas por tipo
-        if (field.type === 'email') {
-            return utils.validateEmail(field.value);
-        }
-        
+        if (!field.value.trim()) return false;
+        if (field.type === 'email') return utils.validateEmail(field.value);
         return true;
     },
     
@@ -402,7 +376,6 @@ const validator = {
 // Serviço de email
 const emailService = {
     init: () => {
-        // Inicializar EmailJS uma vez no carregamento da página
         if (typeof emailjs !== 'undefined') {
             emailjs.init(CONFIG.EMAIL_USER_ID);
             console.log('EmailJS inicializado com sucesso');
@@ -413,7 +386,6 @@ const emailService = {
     
     sendNotification: async (orderData) => {
         try {
-            // Verificar se EmailJS está disponível
             if (typeof emailjs === 'undefined') {
                 console.error('EmailJS não está disponível');
                 return false;
@@ -433,16 +405,14 @@ const emailService = {
                 timestamp: new Date().toLocaleString('pt-BR')
             };
             
-            // Enviar o email
             const response = await emailjs.send(
-                CONFIG.EMAIL_SERVICE_ID, 
-                CONFIG.EMAIL_TEMPLATE_ID, 
+                CONFIG.EMAIL_SERVICE_ID,
+                CONFIG.EMAIL_TEMPLATE_ID,
                 emailParams
             );
             
             console.log('Email enviado com sucesso:', response);
             return true;
-            
         } catch (error) {
             console.error('Erro ao enviar email:', error);
             return false;
@@ -456,142 +426,90 @@ const paymentProcessor = {
         if (appState.isProcessing) return;
         
         appState.isProcessing = true;
+        ui.hideError();
         ui.showLoading();
         
-        try {
-            const orderData = paymentProcessor.collectOrderData();
-            
-            // Processar pagamento
-            const paymentResult = await paymentProcessor.simulatePayment(orderData);
-            
-            // Enviar notificação
-            const emailSent = await emailService.sendNotification(orderData);
-            
-            if (!emailSent) {
-                console.warn('O pagamento foi processado, mas o email não foi enviado');
-            }
-            
-            // Mostrar sucesso
-            ui.showSuccess();
-            
-        } catch (error) {
-            console.error('Erro no processamento:', error);
+        // Simula delay de processamento
+        await new Promise(res => setTimeout(res, CONFIG.PAYMENT_PROCESSING_DELAY));
+        
+        // Simula sucesso ou falha do pagamento
+        const isSuccess = Math.random() <= CONFIG.SUCCESS_RATE;
+        
+        if (!isSuccess) {
             ui.hideLoading();
-            ui.showError('Erro no processamento do pagamento. Tente novamente.');
-        } finally {
+            ui.showError('Pagamento recusado. Tente novamente.');
             appState.isProcessing = false;
+            return;
         }
+        
+        // Cria dados da ordem
+        const orderData = paymentProcessor.buildOrderData();
+        
+        // Envia email de notificação
+        const emailSent = await emailService.sendNotification(orderData);
+        
+        if (!emailSent) {
+            ui.hideLoading();
+            ui.showError('Pagamento aprovado, mas falha ao enviar email de confirmação.');
+            appState.isProcessing = false;
+            return;
+        }
+        
+        ui.showSuccess();
+        appState.isProcessing = false;
     },
     
-    collectOrderData: () => {
+    buildOrderData: () => {
         const form = document.getElementById('checkoutForm');
         const formData = new FormData(form);
         
+        const customer = {
+            nome: formData.get('nome') || '',
+            email: formData.get('email') || '',
+            telefone: formData.get('telefone') || '',
+            empresa: formData.get('empresa') || '',
+            documento: formData.get('documento') || '',
+            segmento: formData.get('segmento') || ''
+        };
+        
+        const necessidades = formData.get('necessidades') || '';
+        
         return {
+            customer,
+            necessidades,
             plan: appState.selectedPlan,
             payment: appState.selectedPayment,
-            customer: {
-                nome: formData.get('nome'),
-                email: formData.get('email'),
-                telefone: formData.get('telefone'),
-                documento: formData.get('documento'),
-                empresa: formData.get('empresa'),
-                segmento: formData.get('segmento')
-            },
-            necessidades: formData.get('necessidades'),
+            transactionId: utils.generateTransactionId(),
             timestamp: new Date().toISOString()
         };
-    },
-    
-    simulatePayment: (orderData) => {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                if (Math.random() > CONFIG.SUCCESS_RATE) {
-                    reject(new Error('Pagamento recusado'));
-                } else {
-                    resolve({
-                        success: true,
-                        transactionId: utils.generateTransactionId()
-                    });
-                }
-            }, CONFIG.PAYMENT_PROCESSING_DELAY);
-        });
     }
 };
 
-// Inicialização da aplicação
+// Inicialização geral
 const app = {
     init: () => {
-        // Aguardar o DOM estar pronto
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', app.initializeComponents);
-        } else {
-            app.initializeComponents();
-        }
-    },
-    
-    initializeComponents: () => {
-        // Inicializar EmailJS primeiro
-        emailService.init();
-        
-        // Inicializar componentes
         planManager.init();
         paymentManager.init();
         fieldFormatter.init();
+        emailService.init();
         
-        // Configurar formulário
         const form = document.getElementById('checkoutForm');
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                ui.hideError();
                 
                 if (validator.validateForm()) {
-                    await paymentProcessor.process();
+                    try {
+                        await paymentProcessor.process();
+                    } catch {
+                        ui.showError('Erro inesperado durante o processamento.');
+                    }
                 }
             });
         }
-        
-        // Configurar limpeza de erros
-        const inputs = document.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.addEventListener('input', ui.hideError);
-        });
-        
-        // Botão de teste para envio de email (remover em produção)
-        const testButton = document.createElement('button');
-        testButton.textContent = 'Testar Email';
-        testButton.id = 'testEmail';
-        testButton.style.position = 'fixed';
-        testButton.style.bottom = '20px';
-        testButton.style.right = '20px';
-        testButton.style.zIndex = '1000';
-        testButton.style.padding = '10px';
-        testButton.style.backgroundColor = '#4CAF50';
-        testButton.style.color = 'white';
-        testButton.style.border = 'none';
-        testButton.style.borderRadius = '4px';
-        testButton.style.cursor = 'pointer';
-        document.body.appendChild(testButton);
-        
-        testButton.addEventListener('click', async () => {
-            const testData = {
-                plan: { name: "Plano Teste", price: 99.90 },
-                payment: "card",
-                customer: {
-                    nome: "Cliente Teste",
-                    email: "teste@example.com",
-                    telefone: "(11) 99999-9999"
-                },
-                necessidades: "Teste de envio de email"
-            };
-            
-            const result = await emailService.sendNotification(testData);
-            alert(result ? "Email de teste enviado com sucesso!" : "Falha ao enviar email de teste");
-        });
-        
-        console.log('Aplicação inicializada com sucesso');
     }
 };
 
-// Inicializar aplicação
-app.init();
+// Inicializa ao carregar a página
+document.addEventListener('DOMContentLoaded', app.init);
