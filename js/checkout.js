@@ -383,54 +383,59 @@ const emailService = {
             console.error('EmailJS não está disponível');
         }
     },
-    
+
     sendNotification: async (orderData) => {
         try {
             if (typeof emailjs === 'undefined') {
                 console.error('EmailJS não está disponível');
                 return false;
             }
-            
-            const planPrice = orderData.plan.price;
-const shippingCost = 1;
-const taxCost = planPrice * CONFIG.TAX_RATE;
-const totalCost = planPrice + taxCost + shippingCost;
 
-const emailParams = {
-    order_id: utils.generateTransactionId(),
-    price: planPrice.toFixed(2),
-    'cost.shipping': shippingCost.toFixed(2),
-    'cost.tax': taxCost.toFixed(2),
-    'cost.total': totalCost.toFixed(2),
-    orders: [
-        {
-            name: orderData.plan.name,
-            units: 1
-        }
-    ],
-    customer_name: orderData.customer.nome,
-    customer_email: orderData.customer.email,
-    customer_phone: orderData.customer.telefone,
-    plan_name: orderData.plan.name,
-    plan_price: utils.formatCurrency(planPrice),
-    company: orderData.customer.empresa || 'Não informado',
-    segment: orderData.customer.segmento || 'Não informado',
-    needs: orderData.necessidades || 'Não informado',
-    payment_method: orderData.payment,
-    timestamp: new Date().toLocaleString('pt-BR')
-};
+            // Calcular custos e formatar valores
+            const planPrice = orderData.plan.price || 0;
+            const shippingCost = 0; // ajuste se tiver valor real de frete
+            const taxCost = planPrice * CONFIG.TAX_RATE;
+            const totalCost = planPrice + taxCost + shippingCost;
 
-            
+            // Montar o objeto com as variáveis para o template
+            const emailParams = {
+                order_id: utils.generateTransactionId(),
+                price: planPrice.toFixed(2),
+                "cost.shipping": shippingCost.toFixed(2),
+                "cost.tax": taxCost.toFixed(2),
+                "cost.total": totalCost.toFixed(2),
+                orders: [{
+                    name: orderData.plan.name || 'Plano',
+                    units: 1,
+                    price: planPrice.toFixed(2)
+                }],
+                email: orderData.customer.email || '', // obrigatório para "to_email" no template
+                customer_name: orderData.customer.nome || '',
+                customer_email: orderData.customer.email || '',
+                customer_phone: orderData.customer.telefone || '',
+                company: orderData.customer.empresa || 'Não informado',
+                segment: orderData.customer.segmento || 'Não informado',
+                needs: orderData.necessidades || 'Não informado',
+                payment_method: orderData.payment || '',
+                timestamp: new Date().toLocaleString('pt-BR')
+            };
+
+            // Enviar o email via EmailJS
             const response = await emailjs.send(
                 CONFIG.EMAIL_SERVICE_ID,
                 CONFIG.EMAIL_TEMPLATE_ID,
                 emailParams
             );
-            
+
             console.log('Email enviado com sucesso:', response);
             return true;
+
         } catch (error) {
-            console.error('Erro ao enviar email:', error);
+            if (error.status === 422) {
+                console.error('Erro 422: Conteúdo inválido - verifique os campos do template e os dados enviados.');
+            } else {
+                console.error('Erro ao enviar email:', error);
+            }
             return false;
         }
     }
